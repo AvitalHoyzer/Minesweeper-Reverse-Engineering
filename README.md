@@ -55,13 +55,14 @@ As seen in the screenshot below, a clear grid structure is visible, beautifully 
 
 <img width="343" height="262" alt="image" src="https://github.com/user-attachments/assets/05284c4b-7d82-45d5-9eeb-f0c28a380139" />
 
-Note on Stride Variation:
 
+**Note:**
 During the analysis, I observed that the game uses two different 'strides' for memory navigation: a 12-byte stride within the graphical rendering routines (to look up sprite pointers in the hdcSrc array) and a 32-byte stride within the logic-heavy routines (to access the raw mine data in the board array). While these methods serve different purposes—one for the graphical interface and one for the core game logic—they both ultimately synchronize to reference the same static board base address at 0x01005340.
 
 Graphical lookup table navigation using a 12-byte stride optimization(at address 0x01001E6A):
 
 <img width="194" height="217" alt="image" src="https://github.com/user-attachments/assets/35089873-2d35-41bd-a581-b2e655ae9940" />
+
 The graphical routine uses `lea eax, [eax+eax*2]` (multiplying by 3) followed by `shl eax, 2` (multiplying by 4). This results in a total multiplier of 12, creating a 12-byte stride used specifically for navigating the GUI pointer table.
 
 ## 3. What values can a cell on the board hold?
@@ -124,7 +125,8 @@ Since both instructions take up the exact same amount of bytes (3 bytes) in the 
 <img width="196" height="85" alt="image" src="https://github.com/user-attachments/assets/dfe9eac9-7a5d-4c25-bd21-6582cd97d2dd" />
 
 ### The Result:
-I applied the patches to input file and launched the game. The hack worked flawlessly: all the mines were instantly flagged right from the start, and because the user hadn't clicked anything yet, the timer remained safely at 0!
+I applied the patches to input file and launched the game. 
+The hack worked flawlessly: all the mines were instantly flagged right from the start, and because the user hadn't clicked anything yet, the timer remained safely at 0!
 
 <img width="376" height="273" alt="image" src="https://github.com/user-attachments/assets/73e67840-479e-4e4d-af9c-e0520e17e94a" />
 
