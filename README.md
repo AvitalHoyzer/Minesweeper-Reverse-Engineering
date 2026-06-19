@@ -56,8 +56,7 @@ As seen in the screenshot below, a clear grid structure is visible, beautifully 
 <img width="343" height="262" alt="image" src="https://github.com/user-attachments/assets/05284c4b-7d82-45d5-9eeb-f0c28a380139" />
 
 
-
-**Note:**
+#### A Note on Stride Variation
 
 During the analysis, I observed that the game uses two different 'strides' for memory navigation: a 12-byte stride within the graphical rendering routines (to look up sprite pointers in the hdcSrc array) and a 32-byte stride within the logic-heavy routines (to access the raw mine data in the board array). While these methods serve different purposes—one for the graphical interface and one for the core game logic—they both ultimately synchronize to reference the same static board base address at 0x01005340.
 
