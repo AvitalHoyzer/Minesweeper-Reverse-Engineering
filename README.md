@@ -55,7 +55,14 @@ As seen in the screenshot below, a clear grid structure is visible, beautifully 
 
 <img width="343" height="262" alt="image" src="https://github.com/user-attachments/assets/05284c4b-7d82-45d5-9eeb-f0c28a380139" />
 
+Note on Stride Variation:
 
+During the analysis, I observed that the game uses two different 'strides' for memory navigation: a 12-byte stride within the graphical rendering routines (to look up sprite pointers in the hdcSrc array) and a 32-byte stride within the logic-heavy routines (to access the raw mine data in the board array). While these methods serve different purposes—one for the graphical interface and one for the core game logic—they both ultimately synchronize to reference the same static board base address at 0x01005340.
+
+Graphical lookup table navigation using a 12-byte stride optimization(at address 0x01001E6A):
+
+<img width="194" height="217" alt="image" src="https://github.com/user-attachments/assets/35089873-2d35-41bd-a581-b2e655ae9940" />
+The graphical routine uses `lea eax, [eax+eax*2]` (multiplying by 3) followed by `shl eax, 2` (multiplying by 4). This results in a total multiplier of 12, creating a 12-byte stride used specifically for navigating the GUI pointer table.
 
 ## 3. What values can a cell on the board hold?
 
@@ -100,5 +107,24 @@ Because I already understood how the memory and bitmasks work, the patch ended u
 1. I searched for the function responsible for randomly generating and placing the mines on the board. I found it at `sub_100367A`. Interestingly, I noticed this function is actually called as soon as the game loads (not just after the first click).
 2. Inside the mine-generation loop, I found the exact instruction that plants the mine into memory (at address `010036FA`):
 
-<img width="218" height="92" alt="image" src="https://github.com/user-attachments/assets/9d97a8a3-4c78-4a6f-aa16-63a8036ee4b2" />
+<img width="218" height="95" alt="image" src="https://github.com/user-attachments/assets/8d807644-f80d-49a0-b510-4eef1655e7af" />
+
+### The Patch Idea:
+* **Original Behavior:** The original instruction used `or byte ptr [eax], 80h` which combined the 0Fh (blank hidden state) with the mine flag (80h) to yield 8Fh (a hidden, unflagged mine).
+* **The Mod:** Instead of letting the game place a hidden mine, I wanted to force it to write the value for a flagged mine (8Eh) directly into memory. That way, when the window's paint function scans the board to draw it, it will immediately see the flags and render them from the very first frame.
+
+### Execution & Hex Editing:
+I replaced the logical OR instruction with a direct MOV instruction to hardcode our desired value.
+* Original Assembly: or byte ptr [eax], 80h -> Hex Bytes: 80 08 80
+* Patched Assembly: mov byte ptr [eax], 8Eh -> Hex Bytes: C6 00 8E
+Since both instructions take up the exact same amount of bytes (3 bytes) in the binary, it meant I didn't have to worry about shifting code or filling space with NOPs.
+
+<img width="332" height="116" alt="image" src="https://github.com/user-attachments/assets/1f5e4297-520e-401f-a289-8547f1105a5c" />
+
+<img width="196" height="85" alt="image" src="https://github.com/user-attachments/assets/dfe9eac9-7a5d-4c25-bd21-6582cd97d2dd" />
+
+### The Result:
+I applied the patches to input file and launched the game. The hack worked flawlessly: all the mines were instantly flagged right from the start, and because the user hadn't clicked anything yet, the timer remained safely at 0!
+
+<img width="376" height="273" alt="image" src="https://github.com/user-attachments/assets/73e67840-479e-4e4d-af9c-e0520e17e94a" />
 
