@@ -71,6 +71,7 @@ Inside the cell-updating function at address **`0x01002FA4`** (`sub_1002F80`), w
 
 ### Isolating the Visual Appearance (Bits 0-4)
 To decide which "sprite" (image asset) to draw on the screen, the game strips away the management bits to find the visual state. This occurs inside the drawing routine at address 0x0100266F (sub_1002646):
+
 <img width="183" height="47" alt="image" src="https://github.com/user-attachments/assets/46476101-18af-4bf5-a429-7d85ae4ac09d" />
 
 The bitwise mask and edx, 1Fh isolates the lowest 5 bits (00011111 in binary). The resulting value acts as an index to pull the correct sprite pointer from the graphic array `hdcSrc`:
@@ -83,7 +84,7 @@ The bitwise mask and edx, 1Fh isolates the lowest 5 bits (00011111 in binary). T
 **Putting it all together:**
 * When a game starts, the board is filled with `0Fh` (empty hidden squares).
 * When the game plants a mine, it takes that `0Fh` and does a bitwise `OR` with `80h` (the mine bit), resulting in **`8Fh`** (a hidden mine).
-* Sם if we want a mine that also visually shows a flag, we need to combine the mine bit (`80h`) with the flag sprite (`0Eh`), which gives us **`8Eh`**.
+* So if we want a mine that also visually shows a flag, we need to combine the mine bit (`80h`) with the flag sprite (`0Eh`), which gives us **`8Eh`**.
 
 ## 1. How did I do it? (The Patch)
 
