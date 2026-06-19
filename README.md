@@ -1,6 +1,8 @@
 # Minesweeper Reverse Engineering Write-up 💣
 
-To solve this challenge, I realized the best approach was to first figure out how the game stores its data behind the scenes, and only then try to write the actual patch. Because of that, I'll start with questions 2 and 3 to build the foundation, and then explain the patch itself (Question 1).
+## Part A
+---
+To solve this Part, I realized the best approach was to first figure out how the game stores its data behind the scenes, and only then try to write the actual patch. Because of that, I'll start with questions 2 and 3 to build the foundation, and then explain the patch itself (Question 1).
 
 ## 2. Where is the game board located in memory? (And how I found it)
 
@@ -18,7 +20,7 @@ When I entered `sub_10021F0`, I immediately recognized it as the classic Win32 `
 Inside `WinMain`, while the window properties were being configured, I looked closely at where the window procedure callback was being assigned:
 ```assembly
 mov [ebp+WndClass.lpfnWndProc], offset sub_1001BC9
-```
+
 This was the breakthrough. In Win32 programming, lpfnWndProc points to the Window Procedure (WndProc)—the core function responsible for intercepting and handling every single event (clicks, keyboard inputs, resizing) sent to the window. This told me that sub_1001BC9 is the main engine running the game logic.
 
 ### Tracking the Mouse Click to the Board Address
