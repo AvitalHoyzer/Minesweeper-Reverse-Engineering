@@ -118,6 +118,7 @@ Because I already understood how the memory and bitmasks work, the patch ended u
 I replaced the logical OR instruction with a direct MOV instruction to hardcode our desired value.
 * Original Assembly: or byte ptr [eax], 80h -> Hex Bytes: 80 08 80
 * Patched Assembly: mov byte ptr [eax], 8Eh -> Hex Bytes: C6 00 8E
+
 Since both instructions take up the exact same amount of bytes (3 bytes) in the binary, it meant I didn't have to worry about shifting code or filling space with NOPs.
 
 <img width="332" height="116" alt="image" src="https://github.com/user-attachments/assets/1f5e4297-520e-401f-a289-8547f1105a5c" />
@@ -126,6 +127,7 @@ Since both instructions take up the exact same amount of bytes (3 bytes) in the 
 
 ### The Result:
 I applied the patches to input file and launched the game. 
+
 The hack worked flawlessly: all the mines were instantly flagged right from the start, and because the user hadn't clicked anything yet, the timer remained safely at 0!
 
 <img width="376" height="273" alt="image" src="https://github.com/user-attachments/assets/73e67840-479e-4e4d-af9c-e0520e17e94a" />
