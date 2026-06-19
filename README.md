@@ -83,7 +83,7 @@ The bitwise mask and edx, 1Fh isolates the lowest 5 bits (00011111 in binary). T
  
 **Putting it all together:**
 * When a game starts, the board is filled with 0Fh (empty hidden squares).
-* When the game plants a mine, it takes that `0Fh` and does a bitwise OR with 80h (the mine bit), resulting in **8Fh** (a hidden mine).
+* When the game plants a mine, it takes that 0Fh and does a bitwise OR with 80h (the mine bit), resulting in **8Fh** (a hidden mine).
 * So if we want a mine that also visually shows a flag, we need to combine the mine bit (80h) with the flag sprite (0Eh), which gives us **8Eh**.
 
 ## 1. How did I do it? (The Patch)
