@@ -53,7 +53,8 @@ I then navigated directly to the base address 0x01005340 in Hex View.
 
 As seen in the screenshot below, a clear grid structure is visible, beautifully outlined by 10h values which act as the invisible "walls" or borders of the board, confirming the structural layout calculation was 100% correct.
 
-<img width="485" height="322" alt="image" src="https://github.com/user-attachments/assets/5be9551c-2ef1-4f4b-8f90-0abc14434c73" />
+<img width="343" height="262" alt="image" src="https://github.com/user-attachments/assets/05284c4b-7d82-45d5-9eeb-f0c28a380139" />
+
 
 
 ## 3. What values can a cell on the board hold?
