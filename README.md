@@ -20,25 +20,40 @@ When I entered `sub_10021F0`, I immediately recognized it as the classic Win32 `
 
 Inside `WinMain`, while the window properties were being configured, I looked closely at where the window procedure callback was being assigned:
 
-<img width="293" height="15" alt="image" src="https://github.com/user-attachments/assets/dd262ad1-5d62-4f8e-8654-4db676c4e4b3" />
+<img width="291" height="11" alt="image" src="https://github.com/user-attachments/assets/e83aff8e-433b-4f07-9332-c1b651dc8a49" />
 
-This was the breakthrough. In Win32 programming, lpfnWndProc points to the Window Procedure (WndProc)—the core function responsible for intercepting and handling every single event (clicks, keyboard inputs, resizing) sent to the window. This told me that sub_1001BC9 is the main engine running the game logic.
+
+This was the breakthrough. In Win32 programming, lpfnWndProc points to the Window Procedure (WndProc)—the core function responsible for intercepting and handling every single event (clicks, keyboard inputs, resizing) sent to the window. This told me that `sub_1001BC9` is the main engine running the game logic.
 
 ### Tracking the Mouse Click to the Board Address
 
-I entered `sub_1001BC9` and followed its internal jump table to follow the left mouse click event (WM_LBUTTONDOWN, which is 0x201).
+I entered `sub_1001BC9` and followed its internal jump table to follow the left mouse click event (`WM_LBUTTONDOWN`, which is `0x201`).
 Here, I analyzed exactly how the program calculates which cell was clicked:
-* The raw mouse pixel coordinates are passed via `lParam`. The X-coordinate is stored in the low-order word, and the Y-coordinate is in the high-order word.
+* The raw mouse pixel coordinates are passed via `lParam`. The X-coordinate is stored in the low-order word, and the Y-coordinate is in the high-order word. 
 * The code extracts the Y-coordinate and performs a bitwise arithmetic shift right: `sar eax, 4`. Shifting a binary number right by 4 bits is mathematically equivalent to dividing it by $2^4$ (which is 16), discarding the remainder.
-* Since every square on the Minesweeper board is exactly 16x16 pixels, this division converts the raw pixel position on the screen into a **logical row and column index** (e.g., Row 3, Column 5).
+* Since every single square on the grid is exactly 16x16 pixels, this division converts the raw screen pixels into a simple row and column index (for example: Row 3, Column 5).
 
-To map this 2D coordinate (Row, Column) into a 1D memory array, the game unrolls the loop using a fixed row width of 32 bytes. I found the following key instruction:
-shl ecx, 5
-Shifting the row index left by 5 bits is equivalent to multiplying it by $2^5$ (which is 32). The final memory address of a clicked cell is calculated using the following formula:$$\text{Cell Address} = \text{Base Address} + (\text{Row} \times 32) + \text{Column}$$By looking at where this calculated address pointed in the assembly, I discovered the fixed, static base memory address of the board: 0x01005340.
-Step 4: Dynamic Debugging Verification
-To prove this was the real board, I fired up a dynamic debugger (x64dbg), ran the game, and paused it. I navigated to the calculated base address 0x01005340 in the Memory Dump window.
+<img width="178" height="62" alt="image" src="https://github.com/user-attachments/assets/ee22e68c-48f9-4120-bcbb-c403c9d4c782" />
+
+Right after calculating the row index, the game invokes sub_10031D4 and passes this row index to access the actual grid data structure.
+
+When the game needs to redraw or update a specific row on the screen (triggered during window paint and update events inside sub_1001BC9), it uses a fast bitwise calculation in the loc_1001E59 block to find the correct memory offset:
+<img width="148" height="32" alt="image" src="https://github.com/user-attachments/assets/6c26de43-0ede-4c91-be88-8d42c4153fda" />
+
+* The lea line multiplies the row index inside eax by 3.
+* The shl line shifts that result left by 2 bits, which multiplies it by 4.
+
+Together, 3 * 4 = 12. This calculation means that each row structure takes up exactly 12 bytes in this internal state lookup table. The program then uses this 12-byte row offset to pull the target row pointer from the address array `dword_1005010`.
+
+By analyzing how these internal drawing updates and state lookups map out in assembly, I discovered the final, static base memory address where the structural board data actually begins: `0x01005340`.
+
+### Dynamic Analysis & Verification
+To prove this was the real board, I fired up a dynamic debugger, ran the game, and paused it. I navigated to the calculated base address 0x01005340 in the Memory Dump window.
 
 As seen in the screenshot below, a clear grid structure is visible, beautifully outlined by 10h values which act as the invisible "walls" or borders of the board, confirming the calculation was 100% correct.
+
+
+
 
 ## 3. What values can a cell on the board hold?
 
