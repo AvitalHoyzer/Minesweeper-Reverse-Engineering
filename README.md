@@ -17,7 +17,9 @@ When I entered `sub_10021F0`, I immediately recognized it as the classic Win32 `
 3. Creating the actual window using `CreateWindowExW` and starting the standard Windows message loop (`GetMessageW` / `DispatchMessageW`).
 
 ### Finding the WndProc (The Brains of the Window)
+
 Inside `WinMain`, while the window properties were being configured, I looked closely at where the window procedure callback was being assigned:
+
 <img width="293" height="15" alt="image" src="https://github.com/user-attachments/assets/dd262ad1-5d62-4f8e-8654-4db676c4e4b3" />
 
 This was the breakthrough. In Win32 programming, lpfnWndProc points to the Window Procedure (WndProc)—the core function responsible for intercepting and handling every single event (clicks, keyboard inputs, resizing) sent to the window. This told me that sub_1001BC9 is the main engine running the game logic.
