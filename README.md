@@ -90,12 +90,14 @@ The bitwise mask and edx, 1Fh isolates the lowest 5 bits (00011111 in binary). T
 
 The goal of the assignment was to make the game launch with all the mines already flagged, without the timer even starting.
 
-Because I already understood how the memory works, the patch ended up being incredibly simple and required modifying just a few bytes in the `.exe` file.
+Because I already understood how the memory and bitmasks work, the patch ended up being incredibly simple and required modifying just a few bytes in the .exe file.
 
 **My research and patching process:**
 
-1. I searched IDA for the function responsible for randomly generating and placing the mines on the board. I found it at `sub_100367A`. Interestingly, I noticed this function is actually called as soon as the game loads (not just after the first click).
+**Locating the Mine Placement:**
+
+1. I searched for the function responsible for randomly generating and placing the mines on the board. I found it at `sub_100367A`. Interestingly, I noticed this function is actually called as soon as the game loads (not just after the first click).
 2. Inside the mine-generation loop, I found the exact instruction that plants the mine into memory (at address `010036FA`):
 
-   ```assembly
-   or byte ptr [eax], 80h
+<img width="218" height="92" alt="image" src="https://github.com/user-attachments/assets/9d97a8a3-4c78-4a6f-aa16-63a8036ee4b2" />
+
