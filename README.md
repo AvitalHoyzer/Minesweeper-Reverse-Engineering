@@ -35,44 +35,57 @@ Here, I analyzed exactly how the program calculates which cell was clicked:
 
 <img width="178" height="62" alt="image" src="https://github.com/user-attachments/assets/ee22e68c-48f9-4120-bcbb-c403c9d4c782" />
 
-Right after calculating the row index, the game invokes sub_10031D4 and passes this row index to access the actual grid data structure.
+Right after calculating the indexes, the game invokes sub_10031D4 to process the coordinate update. Inside the grid lookup block (at address 0x0100213A), the program converts the 2D Row and Column coordinates into a flat 1D array index:
 
-When the game needs to redraw or update a specific row on the screen (triggered during window paint and update events inside sub_1001BC9), it uses a fast bitwise calculation in the loc_1001E59 block to find the correct memory offset:
-<img width="148" height="32" alt="image" src="https://github.com/user-attachments/assets/6c26de43-0ede-4c91-be88-8d42c4153fda" />
+<img width="188" height="39" alt="image" src="https://github.com/user-attachments/assets/475475c2-483a-4b24-ba95-9a8a9bb98ba1" />
 
-* The lea line multiplies the row index inside eax by 3.
-* The shl line shifts that result left by 2 bits, which multiplies it by 4.
+ * The `shl eax, 5` line shifts the row index inside eax left by 5 bits. Shifting left by 5 bits is mathematically equivalent to multiplying by 32.
+ * This explicitly tells us that each row layout on the board allocation structure spans exactly 32 bytes of width in memory.
 
-Together, 3 * 4 = 12. This calculation means that each row structure takes up exactly 12 bytes in this internal state lookup table. The program then uses this 12-byte row offset to pull the target row pointer from the address array `dword_1005010`.
+The program then grabs the targeted cell state by taking the base address pointer byte_1005340, adding the 32-byte row stride offset (eax), and adding the column index offset (ecx). This hardcoded reference proves that the board data structurally begins at memory address `0x01005340`.
 
-By analyzing how these internal drawing updates and state lookups map out in assembly, I discovered the final, static base memory address where the structural board data actually begins: `0x01005340`.
 
 ### Dynamic Analysis & Verification
-To prove this was the real board, I fired up a dynamic debugger, ran the game, and paused it. I navigated to the calculated base address 0x01005340 in the Memory Dump window.
 
-As seen in the screenshot below, a clear grid structure is visible, beautifully outlined by 10h values which act as the invisible "walls" or borders of the board, confirming the calculation was 100% correct.
+To prove this was the real board, I fired up a dynamic debugger (x64dbg), ran the game, and paused it. I placed a Breakpoint on the function return instruction at address 0x0100374E (the end of the mine deployment loop).
 
+I then navigated directly to the base address 0x01005340 in Hex View. 
 
+As seen in the screenshot below, a clear grid structure is visible, beautifully outlined by 10h values which act as the invisible "walls" or borders of the board, confirming the structural layout calculation was 100% correct.
+
+<img width="485" height="322" alt="image" src="https://github.com/user-attachments/assets/5be9551c-2ef1-4f4b-8f90-0abc14434c73" />
 
 
 ## 3. What values can a cell on the board hold?
 
-Once I found the board, I needed to understand what the hex numbers actually meant. Reading the assembly in IDA revealed that the game uses bitwise logic and masks to determine a cell's state:
+Once I found the board, I needed to understand what the hex numbers actually meant. Reading the assembly in IDA revealed that the game uses bitwise logic and masks to determine a cell's state inside the drawing and state-updating functions:
 
-* **Is there a mine? (Bit 7 - The MSB):** In the functions that generate mines or check if you lost, I saw the instruction `test al, 80h`. The hex value `80h` is `10000000` in binary. This is the "Mine Flag". If this specific bit is turned on, the cell contains a mine.
-* **Is the cell opened? (Bit 6):** In the drawing mechanism, I found the instruction `test al, 40h` (`01000000` in binary). This bit tracks whether the cell is still hidden or has already been clicked and revealed to the player.
-* **The visual appearance (Bits 0-4):** To decide which "sprite" (image) to draw on the screen, the game masks out the top bits using `and al, 1Fh` (isolating the bottom 5 bits). The values left over tell us what's drawn:
+### Checking Management Bits (Bit 6 & Bit 7)
+Inside the cell-updating function at address **`0x01002FA4`** (`sub_1002F80`), we can see how the game evaluates the status flags of each square:
+
+<img width="341" height="206" alt="image" src="https://github.com/user-attachments/assets/6e5088b6-99e0-498f-9b5a-5b0de33fb55d" />
+
+* **Is the cell opened? (Bit 6):** The instruction `test al, 40h` (`01000000` in binary) checks if bit 6 is set. If this bit is on, the cell has been clicked and revealed; if it is 0, the cell remains hidden.
+
+* **Is there a mine? (Bit 7 - The MSB):** Further down in the same block, the program executes a sign-flag check (`test al, al` followed by jns). This natively checks if the highest bit (Bit 7, or `80h` / 10000000 in binary) is active, which serves as the "Mine Flag".
+
+### Isolating the Visual Appearance (Bits 0-4)
+To decide which "sprite" (image asset) to draw on the screen, the game strips away the management bits to find the visual state. This occurs inside the drawing routine at address 0x0100266F (sub_1002646):
+<img width="183" height="47" alt="image" src="https://github.com/user-attachments/assets/46476101-18af-4bf5-a429-7d85ae4ac09d" />
+
+The bitwise mask and edx, 1Fh isolates the lowest 5 bits (00011111 in binary). The resulting value acts as an index to pull the correct sprite pointer from the graphic array `hdcSrc`:
+
   * `0Fh`: A standard hidden/closed square.
   * `0Eh`: A square with a flag on it.
   * `0Ah`: A square with a question mark.
   * `00h` to `08h`: An opened square showing a number (0 to 8).
-
+ 
 **Putting it all together:**
 * When a game starts, the board is filled with `0Fh` (empty hidden squares).
-* When the game plants a mine, it takes that `0Fh` and does a bitwise `OR` with `80h` (the mine bit), resulting in **`8Fh`**.
-* So, `8Fh` means a hidden mine. If we want a mine that also visually shows a flag, we need to combine the mine bit (`80h`) with the flag sprite (`0Eh`), which gives us **`8Eh`**.
+* When the game plants a mine, it takes that `0Fh` and does a bitwise `OR` with `80h` (the mine bit), resulting in **`8Fh`** (a hidden mine).
+* Sם if we want a mine that also visually shows a flag, we need to combine the mine bit (`80h`) with the flag sprite (`0Eh`), which gives us **`8Eh`**.
 
-## 1. How did we do it? (The Patch)
+## 1. How did I do it? (The Patch)
 
 The goal of the assignment was to make the game launch with all the mines already flagged, without the timer even starting.
 
