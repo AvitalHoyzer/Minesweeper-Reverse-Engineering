@@ -50,8 +50,9 @@ I didn't know what the data meant, only that this address was being accessed. To
 **Linking Logic to Visuals:** SetPixel is a Windows function that literally paints a single pixel on the screen. Because the code fetches a value from the memory address and immediately uses it to decide which color to paint on the screen, it is undeniable that this memory address contains the "instructions" or the state for the board's visual display.
 
  
-* **Confirmation(Dynamic Analysis):**
- I ran the game and opened the memory at 0x01005340 in the Hex View.
+**Confirmation(Dynamic Analysis):**
+
+I ran the game and opened the memory at 0x01005340 in the Hex View.
 
 The grid structure was instantly visible. I could see the board layout clearly defined by 10h values, which are the game’s internal "walls" or borders.
 
@@ -63,64 +64,6 @@ To confirm this was the live board data, I kept the Hex View open while playing.
 <img width="129" height="193" alt="image" src="https://github.com/user-attachments/assets/91f7fc76-66aa-4776-b2ea-201c9e65e8fd" />
 
 <img width="404" height="278" alt="image" src="https://github.com/user-attachments/assets/cb33c58e-503d-41a0-8f64-b9017d7be183" />
-
-
-
-
-Once I saw this, the logic before and after it made perfect sense. I could see how the game was taking the raw pixel click, converting it into a row and column index, and then using that index to look up a specific spot in the board array.
-
-By clicking on that byte_1005340 address in , it took me straight to the memory location: 0x01005340.
-
-To be absolutely sure I’d found the real board and not just some random data, I used dynamic analysis to verify it:
-
-* I ran the game in a debugger and set a breakpoint at the end of the mine deployment loop (0x0100374E).
-
-* I opened the memory at 0x01005340 in the Hex View.
-
-* The grid structure was instantly visible. I could see the board layout clearly defined by 10h values, which are the game’s internal "walls" or borders.
-
-<img width="343" height="262" alt="image" src="https://github.com/user-attachments/assets/05284c4b-7d82-45d5-9eeb-f0c28a380139" />
-
-
-
-
-Here, I analyzed exactly how the program calculates which cell was clicked:
-* The raw mouse pixel coordinates are passed via `lParam`. The X-coordinate is stored in the low-order word, and the Y-coordinate is in the high-order word. 
-* The code extracts the Y-coordinate and performs a bitwise arithmetic shift right: `sar eax, 4`. Shifting a binary number right by 4 bits is mathematically equivalent to dividing it by $2^4$ (which is 16), discarding the remainder.
-* Since every single square on the grid is exactly 16x16 pixels, this division converts the raw screen pixels into a simple row and column index (for example: Row 3, Column 5).
-
-<img width="178" height="62" alt="image" src="https://github.com/user-attachments/assets/ee22e68c-48f9-4120-bcbb-c403c9d4c782" />
-
-Right after calculating the indexes, the game invokes sub_10031D4 to process the coordinate update. Inside the grid lookup block (at address 0x0100213A), the program converts the 2D Row and Column coordinates into a flat 1D array index:
-
-<img width="188" height="39" alt="image" src="https://github.com/user-attachments/assets/475475c2-483a-4b24-ba95-9a8a9bb98ba1" />
-
- * The `shl eax, 5` line shifts the row index inside eax left by 5 bits. Shifting left by 5 bits is mathematically equivalent to multiplying by 32.
- * This explicitly tells us that each row layout on the board allocation structure spans exactly 32 bytes of width in memory.
-
-The program then grabs the targeted cell state by taking the base address pointer byte_1005340, adding the 32-byte row stride offset (eax), and adding the column index offset (ecx). This hardcoded reference proves that the board data structurally begins at memory address 0x01005340.
-
-
-### Dynamic Analysis & Verification
-
-To prove this was the real board, I fired up a dynamic debugger, ran the game, and paused it. I placed a Breakpoint on the function return instruction at address 0x0100374E (the end of the mine deployment loop).
-
-I then navigated directly to the base address 0x01005340 in Hex View. 
-
-As seen in the screenshot below, a clear grid structure is visible, beautifully outlined by 10h values which act as the invisible "walls" or borders of the board, confirming the structural layout calculation was 100% correct.
-
-<img width="343" height="262" alt="image" src="https://github.com/user-attachments/assets/05284c4b-7d82-45d5-9eeb-f0c28a380139" />
-
-
-#### A Note on Stride Variation
-
-During the analysis, I observed that the game uses two different 'strides' for memory navigation: a 12-byte stride within the graphical rendering routines (to look up sprite pointers in the hdcSrc array) and a 32-byte stride within the logic-heavy routines (to access the raw mine data in the board array). While these methods serve different purposes—one for the graphical interface and one for the core game logic- they both ultimately synchronize to reference the same static board base address at 0x01005340.
-
-Graphical lookup table navigation using a 12-byte stride optimization(at address 0x01001E6A):
-
-<img width="194" height="217" alt="image" src="https://github.com/user-attachments/assets/35089873-2d35-41bd-a581-b2e655ae9940" />
-
-The graphical routine uses `lea eax, [eax+eax*2]` (multiplying by 3) followed by `shl eax, 2` (multiplying by 4). This results in a total multiplier of 12, creating a 12-byte stride used specifically for navigating the GUI pointer table.
 
 ## 3. What values can a cell on the board hold? (Dynamic Analysis)
 
