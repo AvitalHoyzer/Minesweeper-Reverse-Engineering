@@ -122,14 +122,14 @@ By doing this, I understood the meaning of all the values a cell on the board ca
 
 ### Explaining the Bitwise Logic
 
-To satisfy the requirements, here is the connection between the hex values in memory and the display on the screen, based on the bitwise logic I found in the code.
+To understand the connection between these values and what I saw on the screen, I looked at the code. Each cell is one byte, and the game uses the bits inside that byte to store the status and the image.
 
 ### Checking Management Bits (Bit 6 & Bit 7)
 Inside the cell-updating function at address **0x01002FA4** (sub_1002F80), we can see how the game evaluates the status flags of each square:
 
 <img width="341" height="206" alt="image" src="https://github.com/user-attachments/assets/6e5088b6-99e0-498f-9b5a-5b0de33fb55d" />
 
-* **Is the cell opened? (Bit 6):** The instruction `test al, 40h` (01000000 in binary) checks if bit 6 is set. If this bit is on, the cell has been clicked and revealed; if it is 0, the cell remains hidden.
+* **Is the cell opened? (Bit 6):** The instruction `test al, 40h` (01000000 in binary) checks if bit 6 is set. If this bit is 1, the cell has been clicked and revealed. if it is 0, the cell remains hidden.
 
 * **Is there a mine? (Bit 7 - The MSB):** Further down in the same block, the program executes a sign-flag check (`test al, al` followed by jns). This natively checks if the highest bit (Bit 7, or 80h / 10000000 in binary) is active, which serves as the "Mine Flag".
 
@@ -138,12 +138,25 @@ To decide which "sprite" (image asset) to draw on the screen, the game strips aw
 
 <img width="183" height="47" alt="image" src="https://github.com/user-attachments/assets/46476101-18af-4bf5-a429-7d85ae4ac09d" />
 
-The bitwise mask and edx, 1Fh isolates the lowest 5 bits (00011111 in binary). The resulting value acts as an index to pull the correct sprite pointer from the graphic array `hdcSrc`:
+The bitwise mask `and edx, 1Fh` (00011111) isolates the lowest 5 bits.
+This resulting value is the index for the icon (from the graphic array hdcSrc):
+For example:
+  * **0Fh**(00001111): Hidden square.
+  * **0Eh**(00001110): Flag.
+  * **0Dh**(00001101): Question mark.
+  * **00h**(00000000): Empty square.
+  * **01h** to **08h**(00000001-00001000): An opened square showing a number(maximum mines around a square is 8).
 
-  * **0Fh**: A standard hidden/closed square.
-  * **0Eh**: A square with a flag on it.
-  * **0Ah**: A square with a question mark.
-  * **00h** to **08h**: An opened square showing a number (0 to 8).
+While analyzing the byte structure, I noted that Bit 5 is included in the byte but is consistently ignored by the rendering function (sub_1002646) due to the 1Fh (00011111) mask. Furthermore, the game logic functions do not explicitly test Bit 5 for state validation. This indicates that Bit 5 is likely a 'reserved' or 'internal-state' bit, potentially used during the initial board-generation phase or for temporary calculations during neighbor-clearing, without directly impacting the visual state of the cell.
+
+## Summary of my findings
+**Hidden Mine**: 8Fh **->** 100 | 01111 **->** Mine bit (80h) + Hidden sprite (0Fh)
+**Flagged Mine**: 8Eh **->** 100 | 01110 **->** Mine bit (80h) + Flag sprite (0Eh)
+**Opened Empty**: 40h **->** 010 | 00000 **->** Opened bit (40h) + Empty sprite (00h)
+**Numbered (in the screenshot - 1)**: 41h **->** 010 | 00001 **->** Opened bit (40h) + Number sprite (01h)
+**Exploded Mine**: CCh **->** 110 | 01100 **->** Mine (80h) + Opened (40h) + Explosion (0Ch)
+**Wrong Flag**: 0Bh **->** 000 | 01011 **->** Default + Wrong Flag sprite (0Bh)
+
  
 **Putting it all together:**
 * When a game starts, the board is filled with 0Fh (empty hidden squares).
