@@ -25,9 +25,33 @@ Inside WinMain, while the window properties were being configured, I looked clos
 
 This was the breakthrough. In Win32 programming, lpfnWndProc points to the Window Procedure (WndProc) - the core function responsible for intercepting and handling every single event (clicks, keyboard inputs, resizing) sent to the window. This told me that `sub_1001BC9` is the main engine running the game logic.
 
-### Tracking the Mouse Click to the Board Address
+### Tracking the Mouse Click to the Board Address (Static Analysis)
 
-I entered sub_1001BC9 and followed its internal jump table to follow the left mouse click event (WM_LBUTTONDOWN, which is 0x201).
+I entered sub_1001BC9 and I noticed it had a really big "switch case" structure inside it.
+Since this function is responsible for processing mouse clicks, I knew that whenever a player clicks on the board, the game must access the board's data in memory to see what's there.
+So, I started digging through the code inside that function to find where it accesses memory. I was looking for a mov instruction with brackets [], which indicates a memory access. I tried a few different paths in the code until I found the right block. I eventually hit this specific instruction: 
+`mov al, byte_1005340[eax+ecx]`
+
+
+<img width="281" height="175" alt="image" src="https://github.com/user-attachments/assets/a55944b3-a394-4b7b-9472-9624af3ecd6f" />
+
+Once I saw this, the logic before and after it made perfect sense. I could see how the game was taking the raw pixel click, converting it into a row and column index, and then using that index to look up a specific spot in the board array.
+
+By clicking on that byte_1005340 address in , it took me straight to the memory location: 0x01005340.
+
+To be absolutely sure I’d found the real board and not just some random data, I used dynamic analysis to verify it:
+
+* I ran the game in a debugger and set a breakpoint at the end of the mine deployment loop (0x0100374E).
+
+* I opened the memory at 0x01005340 in the Hex View.
+
+* The grid structure was instantly visible. I could see the board layout clearly defined by 10h values, which are the game’s internal "walls" or borders.
+
+
+
+
+
+
 Here, I analyzed exactly how the program calculates which cell was clicked:
 * The raw mouse pixel coordinates are passed via `lParam`. The X-coordinate is stored in the low-order word, and the Y-coordinate is in the high-order word. 
 * The code extracts the Y-coordinate and performs a bitwise arithmetic shift right: `sar eax, 4`. Shifting a binary number right by 4 bits is mathematically equivalent to dividing it by $2^4$ (which is 16), discarding the remainder.
@@ -58,7 +82,7 @@ As seen in the screenshot below, a clear grid structure is visible, beautifully 
 
 #### A Note on Stride Variation
 
-During the analysis, I observed that the game uses two different 'strides' for memory navigation: a 12-byte stride within the graphical rendering routines (to look up sprite pointers in the hdcSrc array) and a 32-byte stride within the logic-heavy routines (to access the raw mine data in the board array). While these methods serve different purposes—one for the graphical interface and one for the core game logic—they both ultimately synchronize to reference the same static board base address at 0x01005340.
+During the analysis, I observed that the game uses two different 'strides' for memory navigation: a 12-byte stride within the graphical rendering routines (to look up sprite pointers in the hdcSrc array) and a 32-byte stride within the logic-heavy routines (to access the raw mine data in the board array). While these methods serve different purposes—one for the graphical interface and one for the core game logic- they both ultimately synchronize to reference the same static board base address at 0x01005340.
 
 Graphical lookup table navigation using a 12-byte stride optimization(at address 0x01001E6A):
 
