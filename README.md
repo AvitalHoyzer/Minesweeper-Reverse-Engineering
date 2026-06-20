@@ -47,7 +47,7 @@ To be absolutely sure I’d found the real board and not just some random data, 
 
 * The grid structure was instantly visible. I could see the board layout clearly defined by 10h values, which are the game’s internal "walls" or borders.
 
-
+<img width="343" height="262" alt="image" src="https://github.com/user-attachments/assets/05284c4b-7d82-45d5-9eeb-f0c28a380139" />
 
 
 
