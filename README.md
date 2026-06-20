@@ -29,13 +29,43 @@ This was the breakthrough. In Win32 programming, lpfnWndProc points to the Windo
 
 I entered sub_1001BC9 and I noticed it had a really big "switch case" structure inside it.
 
-Since this function is responsible for processing mouse clicks, I knew that whenever a player clicks on the board, the game must access the board's data in memory to see what's there.
+Since this function is responsible for processing inputs, I knew that whenever a player clicks on the board, the game must access the board's data in memory to see what's there.
 
-So, I started digging through the code inside that function to find where it accesses memory. I was looking for a mov instruction with brackets [], which indicates a memory access. I tried a few different paths in the code until I found the right block. I eventually hit this specific instruction: 
-`mov al, byte_1005340[eax+ecx]`
-
+So, I started digging through the code inside that function to find where it accesses memory.
+I was looking for instructions that access memory (using square brackets [])
+After trying a few different paths, I found this specific block:
 
 <img width="281" height="175" alt="image" src="https://github.com/user-attachments/assets/a55944b3-a394-4b7b-9472-9624af3ecd6f" />
+
+This was the breakthrough. The instruction `mov al, byte_1005340[eax+ecx]` was the direct link between the game's logic and the board's memory. By clicking on byte_1005340 in the disassembler, it pointed me to the base address **0x01005340**.
+
+<img width="518" height="113" alt="image" src="https://github.com/user-attachments/assets/c316ad46-6354-40b9-b0a8-2858cccaebf3" />
+
+**How I verified this is the board:**
+
+I didn't know what the data meant, only that this address was being accessed. To prove this was the board, I looked at what the code does after fetching that data:
+
+**Observing the Render Loop:** I noticed that the value fetched from that memory address is passed directly into a chain of instructions that ends with call ds:SetPixel.
+ 
+**Linking Logic to Visuals:** SetPixel is a Windows function that literally paints a single pixel on the screen. Because the code fetches a value from the memory address and immediately uses it to decide which color to paint on the screen, it is undeniable that this memory address contains the "instructions" or the state for the board's visual display.
+
+ 
+* **Confirmation(Dynamic Analysis):**
+ I ran the game and opened the memory at 0x01005340 in the Hex View.
+
+The grid structure was instantly visible. I could see the board layout clearly defined by 10h values, which are the game’s internal "walls" or borders.
+
+<img width="460" height="481" alt="image" src="https://github.com/user-attachments/assets/53d479d6-a2a6-452a-a323-22ccb67f43e4" />
+
+
+To confirm this was the live board data, I kept the Hex View open while playing. I noticed that the values remained static until I interacted with the game, at which point the specific bytes updated in real-time, perfectly mirroring my visual actions on the screen.
+
+<img width="129" height="193" alt="image" src="https://github.com/user-attachments/assets/91f7fc76-66aa-4776-b2ea-201c9e65e8fd" />
+
+<img width="404" height="278" alt="image" src="https://github.com/user-attachments/assets/cb33c58e-503d-41a0-8f64-b9017d7be183" />
+
+
+
 
 Once I saw this, the logic before and after it made perfect sense. I could see how the game was taking the raw pixel click, converting it into a row and column index, and then using that index to look up a specific spot in the board array.
 
