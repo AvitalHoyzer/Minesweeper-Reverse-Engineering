@@ -49,7 +49,6 @@ I didn't know what the data meant, only that this address was being accessed. To
  
 **Linking Logic to Visuals:** SetPixel is a Windows function that literally paints a single pixel on the screen. Because the code fetches a value from the memory address and immediately uses it to decide which color to paint on the screen, it is undeniable that this memory address contains the "instructions" or the state for the board's visual display.
 
- 
 **Confirmation(Dynamic Analysis):**
 
 I ran the game and opened the memory at 0x01005340 in the Hex View.
