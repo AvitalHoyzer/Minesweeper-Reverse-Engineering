@@ -28,7 +28,9 @@ This was the breakthrough. In Win32 programming, lpfnWndProc points to the Windo
 ### Tracking the Mouse Click to the Board Address (Static Analysis)
 
 I entered sub_1001BC9 and I noticed it had a really big "switch case" structure inside it.
+
 Since this function is responsible for processing mouse clicks, I knew that whenever a player clicks on the board, the game must access the board's data in memory to see what's there.
+
 So, I started digging through the code inside that function to find where it accesses memory. I was looking for a mov instruction with brackets [], which indicates a memory access. I tried a few different paths in the code until I found the right block. I eventually hit this specific instruction: 
 `mov al, byte_1005340[eax+ecx]`
 
