@@ -153,10 +153,15 @@ While analyzing the byte structure, I noted that Bit 5 is included in the byte b
 
 ## Summary of my findings
 **Hidden Mine**: 8Fh **->** 100 | 01111 **->** Mine bit (80h) + Hidden sprite (0Fh)
+
 **Flagged Mine**: 8Eh **->** 100 | 01110 **->** Mine bit (80h) + Flag sprite (0Eh)
+
 **Opened Empty**: 40h **->** 010 | 00000 **->** Opened bit (40h) + Empty sprite (00h)
+
 **Numbered (in the screenshot - 1)**: 41h **->** 010 | 00001 **->** Opened bit (40h) + Number sprite (01h)
+
 **Exploded Mine**: CCh **->** 110 | 01100 **->** Mine (80h) + Opened (40h) + Explosion (0Ch)
+
 **Wrong Flag**: 0Bh **->** 000 | 01011 **->** Default + Wrong Flag sprite (0Bh)
 
  
