@@ -139,7 +139,9 @@ To decide which "sprite" (image asset) to draw on the screen, the game strips aw
 <img width="183" height="47" alt="image" src="https://github.com/user-attachments/assets/46476101-18af-4bf5-a429-7d85ae4ac09d" />
 
 The bitwise mask `and edx, 1Fh` (00011111) isolates the lowest 5 bits.
+
 This resulting value is the index for the icon (from the graphic array hdcSrc):
+
 For example:
   * **0Fh**(00001111): Hidden square.
   * **0Eh**(00001110): Flag.
