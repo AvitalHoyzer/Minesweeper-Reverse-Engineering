@@ -66,7 +66,7 @@ To confirm this was the live board data, I kept the Hex View open while playing.
 
 ## 3. What values can a cell on the board hold? (Dynamic Analysis)
 
-I debugged, ran the game, and focused on the board's memory address (0x01005340).
+I debugged(It wasn't necessary to put a breakpoint), ran the game, and focused on the board's memory address (0x01005340).
 
 ### What I Observed
 I played around with the game and watched how the numbers in memory changed:
