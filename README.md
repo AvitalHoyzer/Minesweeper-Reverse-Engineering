@@ -68,7 +68,7 @@ The graphical routine uses `lea eax, [eax+eax*2]` (multiplying by 3) followed by
 
 ## 3. What values can a cell on the board hold? (Dynamic Analysis)
 
-I opened my debugger, ran the game, and focused on the board's memory address (0x01005340).
+I debugged, ran the game, and focused on the board's memory address (0x01005340).
 
 ### What I Observed
 I played around with the game and watched how the numbers in memory changed:
