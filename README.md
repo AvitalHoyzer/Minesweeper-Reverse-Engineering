@@ -66,9 +66,63 @@ Graphical lookup table navigation using a 12-byte stride optimization(at address
 
 The graphical routine uses `lea eax, [eax+eax*2]` (multiplying by 3) followed by `shl eax, 2` (multiplying by 4). This results in a total multiplier of 12, creating a 12-byte stride used specifically for navigating the GUI pointer table.
 
-## 3. What values can a cell on the board hold?
+## 3. What values can a cell on the board hold? (Dynamic Analysis)
 
-Once I found the board, I needed to understand what the hex numbers actually meant. Reading the assembly in IDA revealed that the game uses bitwise logic and masks to determine a cell's state inside the drawing and state-updating functions:
+I opened my debugger, ran the game, and focused on the board's memory address (0x01005340).
+
+### What I Observed
+I played around with the game and watched how the numbers in memory changed:
+
+**The Grid Layout:** I saw that the board is bordered by 10h, and inside, there was either **8Fh** or **0Fh**. I understood that one of them is a hidden mine and the other is empty.
+
+<img width="557" height="488" alt="image" src="https://github.com/user-attachments/assets/469cecfe-f154-4ce7-8a0f-197cbd2c2ebc" />
+
+**Flagging:** I placed a few flags on the board:
+
+<img width="570" height="503" alt="image" src="https://github.com/user-attachments/assets/413dae7c-b4b9-47d7-9231-9be3f676e337" />
+
+After pause:
+
+<img width="438" height="230" alt="image" src="https://github.com/user-attachments/assets/3706d632-f25a-4d97-93b8-938226f13e7d" />
+
+I saw that what was 8Fh turned into **8Eh**, and what was 0Fh turned into **0Eh**.
+
+**Question Marks:** I kept playing and tried question marks:
+
+<img width="407" height="496" alt="image" src="https://github.com/user-attachments/assets/59c13046-728c-4406-9ad0-db2bb626e0cd" />
+
+After pause:
+
+<img width="343" height="239" alt="image" src="https://github.com/user-attachments/assets/0fbff84c-7e6a-4920-b60a-8bd2f6546db3" />
+
+the value turned into **0Dh**.
+
+**Opening Squares:** I tried to click on what was 0Fh and I understood they were empty:
+
+<img width="504" height="496" alt="image" src="https://github.com/user-attachments/assets/2c834104-a594-4c8d-95fd-c9a6c49574fd" />
+
+After pause:
+
+<img width="379" height="238" alt="image" src="https://github.com/user-attachments/assets/27b80a43-8922-447f-906f-d3f76e9d3cb5" />
+
+When I paused the game, I saw that squares with a number on them became **41h**, and completely empty squares became **40h**.
+
+**Mines:** I understood that the ones that were 8Fh and then 8Eh were likely the mines.
+When I clicked on what was 8Fh, I saw that it was indeed the mine!
+
+<img width="527" height="506" alt="image" src="https://github.com/user-attachments/assets/635c210e-3948-4aef-bc4b-808f23b67d42" />
+
+After pause:
+
+<img width="394" height="235" alt="image" src="https://github.com/user-attachments/assets/99c527ee-3751-458d-8840-806b4db8413a" />
+
+**Game Over:** After pausing, I saw that a mine I clicked turned into CCh. Also, when I put a flag on a square that wasn't a mine and the game ended, it turned into **0Bh**.
+
+By doing this, I understood the meaning of all the values a cell on the board can receive.
+
+### Explaining the Bitwise Logic
+
+To satisfy the requirements, here is the connection between the hex values in memory and the display on the screen, based on the bitwise logic I found in the code.
 
 ### Checking Management Bits (Bit 6 & Bit 7)
 Inside the cell-updating function at address **0x01002FA4** (sub_1002F80), we can see how the game evaluates the status flags of each square:
