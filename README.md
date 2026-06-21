@@ -203,8 +203,6 @@ I applied the patches to input file and launched the game.
 
 The hack worked flawlessly: all the mines were instantly flagged right from the start, and because the user hadn't clicked anything yet, the timer remained safely at 0!
 
-<img width="376" height="273" alt="image" src="https://github.com/user-attachments/assets/73e67840-479e-4e4d-af9c-e0520e17e94a" />
-
 <img width="122" height="188" alt="image" src="https://github.com/user-attachments/assets/5b8d52e6-7715-4555-aead-de9ee680b0d4" />
 
 <img width="122" height="185" alt="image" src="https://github.com/user-attachments/assets/93520f2c-681b-4f49-82cb-26f8caba7d36" />
