@@ -210,7 +210,7 @@ The hack worked flawlessly: all the mines were instantly flagged right from the 
 ---
 I tried a lot of things until I realized that in the end, it was actually very simple. Here is the full process of my experiments and how I found the final solution, answering the required questions along the way.
 
-### 4,5 Where is the game board size and the number of mines determined?
+### 4,5. Where is the game board size and the number of mines determined?
 At first, I looked for where the board size is set. I opened the Strings window in IDA to search for keywords like HEIGHT or WIDTH. Instead, I found these Windows API functions:
 
 * GetPrivateProfileIntW
