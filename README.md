@@ -205,3 +205,79 @@ The hack worked flawlessly: all the mines were instantly flagged right from the 
 
 <img width="376" height="273" alt="image" src="https://github.com/user-attachments/assets/73e67840-479e-4e4d-af9c-e0520e17e94a" />
 
+
+## Part B
+---
+I tried a lot of things until I realized that in the end, it was actually very simple. Here is the full process of my experiments and how I found the final solution, answering the required questions along the way.
+
+### 4,5 Where is the game board size and the number of mines determined?
+At first, I looked for where the board size is set. I opened the Strings window in IDA to search for keywords like HEIGHT or WIDTH. Instead, I found these Windows API functions:
+
+* GetPrivateProfileIntW
+
+* GetPrivateProfileStringW
+
+<img width="323" height="29" alt="צילום מסך 2026-06-20 234636" src="https://github.com/user-attachments/assets/f47fbb6e-fe89-40c5-8844-5a1a2b0853c7" />
+
+
+These APIs are used to read configuration files (like .ini files). I pressed Cross-References (X) on GetPrivateProfileIntW to see where it is used, and it brought me to function sub_1003A12.
+
+<img width="337" height="311" alt="צילום מסך 2026-06-20 234859" src="https://github.com/user-attachments/assets/b6126e6f-0af7-44d0-8135-a69cbbad453b" />
+
+This function is a wrapper that tries to load a file named entpack.ini into the EBX register. The key line here is:
+`lea eax, ds:10050D0h[eax*4]`
+
+<img width="472" height="280" alt="צילום מסך 2026-06-20 235118" src="https://github.com/user-attachments/assets/8318256b-ff60-4ffa-87af-bfe04e765fea" />
+
+<img width="500" height="88" alt="צילום מסך 2026-06-20 235929" src="https://github.com/user-attachments/assets/32f7b724-1e65-461f-9a73-7fb30875fa9c" />
+
+This points to an array of strings in memory. Every time the function is called, it grabs a different string to use as a setting name (like "Height", "Width", and "Mines"). Since there is no entpack.ini file in the game folder, the program is supposed to fall back to hardcoded default values.
+
+I checked the Cross-References (X) for where sub_1003A12 is called, and found it inside function sub_1003AB0 in a code block named loc_1003B68.
+
+<img width="215" height="316" alt="צילום מסך 2026-06-21 001249" src="https://github.com/user-attachments/assets/ca38ef42-54a7-4a49-bfda-b8a27ae3448b" />
+
+
+I placed a breakpoint at the start of sub_1003AB0 and ran the debugger. To my surprise, the code completely skipped this default settings block! It jumped straight to the right-side block. Why? Because the game was already run on this computer before, so its configuration data already existed in the Windows Registry. It didn't need to read the defaults or the INI file.
+
+<img width="559" height="167" alt="צילום מסך 2026-06-21 003633" src="https://github.com/user-attachments/assets/7f8cf1d0-245f-4526-8778-20f5116ff8cf" />
+
+<img width="538" height="269" alt="צילום מסך 2026-06-21 003934" src="https://github.com/user-attachments/assets/322205d9-0765-4626-b181-9a649164f821" />
+
+
+To find where the code actually pulls the real numbers (like 10 mines), I looked at the right-side block of sub_1003AB0. When the game successfully opens the Registry key.
+
+I opened the Registry Editor on my computer and navigated to the path found in the code:
+HKEY_CURRENT_USER\Software\Microsoft\winmine
+
+There I found all the active values the game was using: Mines was set to 10, Height was 16, Width was 16, and Difficulty was 0 (Beginner).
+
+<img width="499" height="401" alt="צילום מסך 2026-06-21 004125" src="https://github.com/user-attachments/assets/926854b2-7cdb-4c5f-a7a9-760054ba20a2" />
+
+### My Initial Experiments (What went wrong):
+
+**Registry Experiment:** I tried changing the Mines value in the Registry directly to 1. But this caused a complete mess on the board (Board Corruption). There were random flags everywhere, sometimes 2 mines, sometimes 1. This happened because of Registry Persistence / State Mismatch. the game saves old session data (like flag and mine positions) from previous games in the Registry, and it was fighting against the new changes.
+
+**Skipping the Registry Experiment:** I realized they asked to "patch" the code, so I shouldn't touch the Registry. I went back to IDA and tried to force the code to run through the left-side default block by changing a jnz instruction to a jmp. I also patched the default mine value from push 0Ah (10) to push 1. But this caused the game to crash with a warning: referenced memory at 0xABABABAC. The memory could not be written. This happened because changing that jump messed up the Stack balance, making the function read uninitialized garbage memory.
+
+**The Menu Realization:** I also realized that changing the default values in sub_1003AB0 wouldn't help if a player changes the difficulty level inside the game menu. When you select Beginner, Intermediate, or Expert, a block inside sub_1001BC9 reads the mine counts directly from a hardcoded memory array (dword_1005010) and updates a variable named dword_10056A4.
+
+
+### 6. How should the code be patched so that upon running there is only a single mine on the board?
+
+The goal is to win the game as fast as possible (without patching the timer). Instead of fighting the Registry or the menu settings, the perfect solution was right in front of me the whole time: Patch the code at the exact place where the board is freshly generated.
+
+I looked at function sub_100367A. This function is responsible for creating a new game board. It is called on startup, and it is also called every time you click a difficulty level in the menu. Inside this function, it prepares the loop that randomly scatters the mines on the board:
+
+<img width="161" height="137" alt="image" src="https://github.com/user-attachments/assets/7e335bf1-536a-424a-9c10-874945b38e86" />
+
+The variable dword_1005330 is the actual live counter for the mine-placement loop. If we change EAX to 1 right before this variable is set, the loop will place exactly 1 mine and stop.
+
+<img width="165" height="139" alt="image" src="https://github.com/user-attachments/assets/89528df1-12c7-4b72-a81b-dc3004419ddc" />
+
+### Result:
+Now, no matter what difficulty level is chosen, and no matter what is written in the Registry, the placement loop is forced to receive a value of 1. The game generates a perfectly clean board of the correct size but puts only one mine on it. Clicking any safe square instantly triggers a victory because all non-mine squares are revealed at once!
+
+<img width="374" height="271" alt="image" src="https://github.com/user-attachments/assets/a316d005-b8cb-4c5a-958d-c14d8382fca5" />
+
+
