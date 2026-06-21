@@ -285,7 +285,9 @@ Now, no matter what difficulty level is chosen, and no matter what is written in
 
 ## Part C
 ---
-The goal is to add new code that calls a popup window function (MessageBox). Since I searched in IDA and saw that the function MessageBoxW is already imported by the game, I just need to use it.
+7. The goal is to add new code that calls a popup window function (MessageBox) that trigger automatically as soon as the game opens. 
+
+Since I searched in IDA and saw that the function MessageBoxW is already imported by the game, I just need to use it.
 
 <img width="565" height="39" alt="צילום מסך 2026-06-21 170814" src="https://github.com/user-attachments/assets/fa681b34-a917-4bf5-bc71-72b34e4bf3f6" />
 
@@ -317,7 +319,7 @@ Right now, IDA thinks this whole area is dd (an array of numbers). We want it to
 
 <img width="614" height="293" alt="צילום מסך 2026-06-21 172335" src="https://github.com/user-attachments/assets/33f55aab-ae38-4359-a609-11619e8b7ecc" />
 
-**Writing the Strings and the Code:
+**Writing the Strings and the Code:**
 In that space, I wrote the strings we needed. 
 
 <img width="368" height="119" alt="צילום מסך 2026-06-21 174128" src="https://github.com/user-attachments/assets/09f74c04-aca0-4dd7-b6ab-63f4388eed0b" />
@@ -349,6 +351,7 @@ Then, instead of these two original instructions at start, I wrote a **jmp 01020
 
 <img width="524" height="136" alt="צילום מסך 2026-06-21 191201" src="https://github.com/user-attachments/assets/e8fb59f7-f2e9-427e-95be-21681bc4592c" />
 
+and in the new section:
 
 <img width="565" height="276" alt="צילום מסך 2026-06-21 194938" src="https://github.com/user-attachments/assets/c8829b51-d2fa-41cf-bd96-cc6f12c19c08" />
 
@@ -359,6 +362,8 @@ And indeed, as you can see in the image of the graphical view, the execution flo
 <img width="476" height="318" alt="צילום מסך 2026-06-21 194854" src="https://github.com/user-attachments/assets/fa090a63-9a5f-4201-860e-d701b022dfbc" />
 
 ### Result:
+
+When running the modified winmine.exe, the game immediately jumps to our new section and displays the "Hacked by BG" popup window. Once the user clicks "OK", the program safely runs the original instructions and goes back to the game, which runs perfectly.
 
 <img width="98" height="101" alt="צילום מסך 2026-06-21 195040" src="https://github.com/user-attachments/assets/588d86b7-c39c-4468-bf0c-879ecd34a2df" />
 
