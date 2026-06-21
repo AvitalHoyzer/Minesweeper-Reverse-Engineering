@@ -283,4 +283,83 @@ Now, no matter what difficulty level is chosen, and no matter what is written in
 
 <img width="374" height="271" alt="image" src="https://github.com/user-attachments/assets/a316d005-b8cb-4c5a-958d-c14d8382fca5" />
 
+## Part C
+---
+The goal is to add new code that calls a popup window function (MessageBox). Since I searched in IDA and saw that the function MessageBoxW is already imported by the game, I just need to use it.
+
+<img width="565" height="39" alt="צילום מסך 2026-06-21 170814" src="https://github.com/user-attachments/assets/fa681b34-a917-4bf5-bc71-72b34e4bf3f6" />
+
+
+**Creating new Section (CFF Explorer):**
+
+I need to write new code that will run right before the start function. Therefore, I opened the file in CFF Explorer and added a new section where I could write. I made it Executable, Readable, and Writable by changing its characteristics in the properties to E0000020 instead of C0000000.
+(Explanation: E0000020 gives the section the specific permissions needed to read data, write data, and execute code).
+
+<img width="958" height="580" alt="צילום מסך 2026-06-21 171245" src="https://github.com/user-attachments/assets/6d06ee50-ec61-4a3a-9026-4b8503683bb9" />
+
+<img width="717" height="194" alt="צילום מסך 2026-06-21 171420" src="https://github.com/user-attachments/assets/19a20ae0-7e1b-457c-857f-392e569b21f6" />
+
+The second column, called Virtual Address, shows 00020000 for our new row. Since the game's Image Base memory address is 01000000, it means that when we open the file in IDA, our new section will start exactly at:
+01000000 + 00020000 = 01020000
+
+The next step is to reopen the file in IDA so we can start engineering the MessageBoxW code inside our new section.
+
+**Preparing the Memory:**
+The new section starts at the virtual address 01020000. Everything there is currently empty and filled with 00. We will use the beginning of this section to write the text strings that will appear in the window:
+
+* The title: "Cyber"
+
+* The message content: "Hacked by BG"
+
+<img width="644" height="215" alt="צילום מסך 2026-06-21 171905" src="https://github.com/user-attachments/assets/11a058cc-13ea-4598-8845-fb0339176dd2" />
+
+Right now, IDA thinks this whole area is dd (an array of numbers). We want it to be a clean text space. I stood on the line dd 400h dup(0) at address 01020000 and pressed the U key on the keyboard (shortcut for Undefine). This cleared the definitions and turned the whole area into a sequence of raw bytes (db) that we can easily edit and fill with our text.
+
+<img width="614" height="293" alt="צילום מסך 2026-06-21 172335" src="https://github.com/user-attachments/assets/33f55aab-ae38-4359-a609-11619e8b7ecc" />
+
+**Writing the Strings and the Code:
+In that space, I wrote the strings we needed. 
+
+<img width="368" height="119" alt="צילום מסך 2026-06-21 174128" src="https://github.com/user-attachments/assets/09f74c04-aca0-4dd7-b6ab-63f4388eed0b" />
+
+<img width="296" height="126" alt="צילום מסך 2026-06-21 174159" src="https://github.com/user-attachments/assets/073b3747-5b70-4504-9f92-b428c2c8f044" />
+
+<img width="348" height="336" alt="צילום מסך 2026-06-21 174930" src="https://github.com/user-attachments/assets/7a0d7fa5-acb4-4376-901a-105498fab502" />
+
+<img width="563" height="170" alt="צילום מסך 2026-06-21 194954" src="https://github.com/user-attachments/assets/b3de803a-11ec-407e-9dcc-f8c77630775d" />
+
+
+After a gap of a few bytes (at 01020050), I wrote the required assembly code to trigger the popup.
+
+I had to hijack the execution flow from the very beginning of the game. The original code at the start function begins with these two instructions:
+
+
+<img width="508" height="80" alt="צילום מסך 2026-06-21 180930" src="https://github.com/user-attachments/assets/93d4ab37-73f8-4194-b1c6-209d1f626e24" />
+
+
+push 70h (takes 2 bytes)
+
+push offset stru_1001390 (takes 5 bytes)
+
+Total space: 7 bytes.
+
+A jmp instruction to our new section takes exactly 5 bytes. Because **push 70h** is only 2 bytes, a jmp there would overwrite and break the next instruction (push offset stru_1001390). To handle this, I moved both original instructions into my new custom code block so they can run later.
+
+Then, instead of these two original instructions at start, I wrote a **jmp 01020050** to jump straight to our code cave, and I added exactly 2 nop instructions. (Since the jmp takes 5 bytes and the two original instructions took 7 bytes together, I add two nops to fill the remaining 2 bytes perfectly).
+
+<img width="524" height="136" alt="צילום מסך 2026-06-21 191201" src="https://github.com/user-attachments/assets/e8fb59f7-f2e9-427e-95be-21681bc4592c" />
+
+
+<img width="565" height="276" alt="צילום מסך 2026-06-21 194938" src="https://github.com/user-attachments/assets/c8829b51-d2fa-41cf-bd96-cc6f12c19c08" />
+
+Inside our custom section, right after calling MessageBoxW, my code runs the two original push instructions that we moved, and then executes a jmp loc_1003E28 to jump back to the original game flow.
+
+And indeed, as you can see in the image of the graphical view, the execution flow goes exactly as we wanted!
+
+<img width="476" height="318" alt="צילום מסך 2026-06-21 194854" src="https://github.com/user-attachments/assets/fa090a63-9a5f-4201-860e-d701b022dfbc" />
+
+### Result:
+
+<img width="98" height="101" alt="צילום מסך 2026-06-21 195040" src="https://github.com/user-attachments/assets/588d86b7-c39c-4468-bf0c-879ecd34a2df" />
+
 
