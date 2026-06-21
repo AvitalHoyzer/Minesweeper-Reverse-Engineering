@@ -373,7 +373,7 @@ The goal of this stage is to add code to the program that connects to a local HT
 
 **Setting Up the Local HTTP Server**
 
-Before writing any Assembly code, I needed an active receiver. A client cannot send a network request into thin air; a server must be listening on port 80, or the connection will instantly fail.
+Before writing any Assembly code, I needed an active receiver. a server must be listening on port 80, or the connection will instantly fail.
 
 To achieve this, I deployed a lightweight, built-in Python HTTP server via the command line:
 
