@@ -369,7 +369,7 @@ When running the modified winmine.exe, the game immediately jumps to our new sec
 
 ## Part D
 ---
-The goal of this stage is to add code to the program that connects to a local HTTP server (127.0.0.1:80) and sends a message of my choice.
+8. The goal of this stage is to add code to the program that connects to a local HTTP server (127.0.0.1:80) and sends a message of my choice.
 
 **Setting Up the Local HTTP Server**
 
