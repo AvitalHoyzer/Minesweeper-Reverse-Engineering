@@ -426,3 +426,4 @@ Simultaneously, the Python server immediately captures and logs the network hit:
 * 404 (File Not Found): This response is completely correct and expected. The Python server structurally looks for a local file named hacked. Since it does not exist, it responds with a 404. My research milestone was fully met simply by proving that the client application was successfully forced to transmit data out to the network interface.
 
 
+
